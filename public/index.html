@@ -17,24 +17,43 @@
     const { useState, useEffect } = React;
 
     // Инициализация VK SDK
-    window.vkAsyncInit = function() {
-      VK.init({
-        apiId: 53563138 // Убедитесь, что это ваш реальный app_id
-      }, () => {
-        console.log("VK SDK инициализирован успешно");
-        // Здесь можно добавить вызовы VK API, если нужно
-      }, (error) => {
-        console.error("Ошибка инициализации VK SDK:", error);
-      });
+    window.vkAsyncInit = function () {
+      VK.init(
+        {
+          apiId: 53563138, // Ваш app_id
+        },
+        () => {
+          console.log("VK SDK инициализирован успешно");
+          // Тестовый вызов API для проверки
+          VK.api(
+            "users.get",
+            { fields: "photo_100" },
+            (data) => {
+              console.log("VK API ответ:", data);
+            },
+            (error) => {
+              console.error("Ошибка VK API:", error);
+            }
+          );
+        },
+        (error) => {
+          console.error("Ошибка инициализации VK SDK:", error);
+        }
+      );
     };
 
-    // Функция для получения параметров из URL
+    // Функция для получения всех VK параметров из URL
     const getVKParams = () => {
       const params = new URLSearchParams(window.location.search);
+      const allParams = {};
+      for (const [key, value] of params) {
+        allParams[key] = value;
+      }
+      console.log("Все VK параметры:", allParams);
       return {
-        appId: params.get('vk_app_id'),
-        userId: params.get('vk_user_id'),
-        viewerId: params.get('vk_viewer_id'),
+        appId: params.get("vk_app_id"),
+        userId: params.get("vk_user_id"),
+        viewerId: params.get("vk_viewer_id"),
       };
     };
 
@@ -50,24 +69,38 @@
         setVkParams(params);
         console.log("VK параметры:", params);
         if (!params.appId) {
-          setError("Не удалось получить параметры VK. Проверьте настройки приложения.");
+          setError("Не удалось получить параметры VK. Проверьте запуск в VK iframe.");
           setLoading(false);
         }
       }, []);
 
+      // Проверка аутентификации VK
+      useEffect(() => {
+        if (vkParams.appId) {
+          VK.auth.login((response) => {
+            if (response.session) {
+              console.log("Пользователь авторизован:", response.session);
+            } else {
+              console.error("Ошибка авторизации:", response);
+              setError("Не удалось авторизоваться в VK.");
+            }
+          });
+        }
+      }, [vkParams]);
+
       // Получение данных с сервера
       useEffect(() => {
-        if (!vkParams.appId) return; // Ждем получения параметров
-        fetch('/api/products')
-          .then(res => {
-            if (!res.ok) throw new Error('Сетевой запрос не выполнен');
+        if (!vkParams.appId) return;
+        fetch("/api/products")
+          .then((res) => {
+            if (!res.ok) throw new Error("Сетевой запрос не выполнен");
             return res.json();
           })
-          .then(data => {
+          .then((data) => {
             setProducts(data);
             setLoading(false);
           })
-          .catch(err => {
+          .catch((err) => {
             setError(err.message);
             setLoading(false);
           });
@@ -76,11 +109,29 @@
       // Функция для определения повседневной одежды
       const isCasualClothing = (title, description) => {
         if (!title && !description) return false;
-        const combined = `${title || ''} ${description || ''}`.toLowerCase();
-        const casualKeywords = ['t-shirt', 'shirt', 'jacket', 'pants', 'jeans', 'hoodie', 'sweater', 'shorts'];
-        const excludeKeywords = ['backpack', 'bag', 'belt', 'cap', 'hat', 'sunglasses'];
-        return casualKeywords.some(keyword => combined.includes(keyword)) &&
-               !excludeKeywords.some(keyword => combined.includes(keyword));
+        const combined = `${title || ""} ${description || ""}`.toLowerCase();
+        const casualKeywords = [
+          "t-shirt",
+          "shirt",
+          "jacket",
+          "pants",
+          "jeans",
+          "hoodie",
+          "sweater",
+          "shorts",
+        ];
+        const excludeKeywords = [
+          "backpack",
+          "bag",
+          "belt",
+          "cap",
+          "hat",
+          "sunglasses",
+        ];
+        return (
+          casualKeywords.some((keyword) => combined.includes(keyword)) &&
+          !excludeKeywords.some((keyword) => combined.includes(keyword))
+        );
       };
 
       // Генерация случайного количества на складе
@@ -88,12 +139,14 @@
 
       // Фильтрация мужской повседневной одежды
       const mensCasualClothing = products
-        .filter(p => p.category && p.category.toLowerCase().includes('men'))
-        .filter(p => isCasualClothing(p.title, p.description));
+        .filter((p) => p.category && p.category.toLowerCase().includes("men"))
+        .filter((p) => isCasualClothing(p.title, p.description));
 
       return (
         <div className="container mx-auto p-4">
-          <h1 className="text-2xl font-bold mb-4 text-center">Мужская повседневная одежда</h1>
+          <h1 className="text-2xl font-bold mb-4 text-center">
+            Мужская повседневная одежда
+          </h1>
           {loading && <p className="text-center">Загрузка...</p>}
           {error && <p className="text-center text-red-500">Ошибка: {error}</p>}
           {!loading && !error && mensCasualClothing.length === 0 && (
@@ -102,20 +155,31 @@
               <p>Доступные продукты в категории "men's clothing":</p>
               <ul className="list-disc mx-auto max-w-md">
                 {products
-                  .filter(p => p.category && p.category.toLowerCase().includes('men'))
-                  .map(product => (
-                    <li key={product.id}>{product.title} (Категория: {product.category})</li>
+                  .filter((p) => p.category && p.category.toLowerCase().includes("men"))
+                  .map((product) => (
+                    <li key={product.id}>
+                      {product.title} (Категория: {product.category})
+                    </li>
                   ))}
               </ul>
             </div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mensCasualClothing.map(product => (
-              <div key={product.id} className="border rounded-lg p-4 shadow-md hover:shadow-lg transition">
-                <img src={product.image} alt={product.title} className="w-full h-48 object-contain mb-4" />
+            {mensCasualClothing.map((product) => (
+              <div
+                key={product.id}
+                className="border rounded-lg p-4 shadow-md hover:shadow-lg transition"
+              >
+                <img
+                  src={product.image}
+                  alt={product.title}
+                  className="w-full h-48 object-contain mb-4"
+                />
                 <h2 className="text-lg font-semibold">{product.title}</h2>
                 <p className="text-gray-600">Цена: ${product.price.toFixed(2)}</p>
-                <p className="text-gray-600">Количество на складе: {getRandomStock()}</p>
+                <p className="text-gray-600">
+                  Количество на складе: {getRandomStock()}
+                </p>
               </div>
             ))}
           </div>
@@ -123,7 +187,8 @@
       );
     };
 
-    ReactDOM.render(<App />, document.getElementById('root'));
+    // Используем createRoot вместо устаревшего ReactDOM.render
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
   </script>
 </body>
 </html>
