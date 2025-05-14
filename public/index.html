@@ -19,17 +19,45 @@
     // Инициализация VK SDK
     window.vkAsyncInit = function() {
       VK.init({
-        apiId: 53563138 // Ваш app_id, замените на реальный, если отличается
+        apiId: 53563138 // Убедитесь, что это ваш реальный app_id
+      }, () => {
+        console.log("VK SDK инициализирован успешно");
+        // Здесь можно добавить вызовы VK API, если нужно
+      }, (error) => {
+        console.error("Ошибка инициализации VK SDK:", error);
       });
+    };
+
+    // Функция для получения параметров из URL
+    const getVKParams = () => {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        appId: params.get('vk_app_id'),
+        userId: params.get('vk_user_id'),
+        viewerId: params.get('vk_viewer_id'),
+      };
     };
 
     const App = () => {
       const [products, setProducts] = useState([]);
       const [loading, setLoading] = useState(true);
       const [error, setError] = useState(null);
+      const [vkParams, setVkParams] = useState({});
+
+      // Получение VK параметров
+      useEffect(() => {
+        const params = getVKParams();
+        setVkParams(params);
+        console.log("VK параметры:", params);
+        if (!params.appId) {
+          setError("Не удалось получить параметры VK. Проверьте настройки приложения.");
+          setLoading(false);
+        }
+      }, []);
 
       // Получение данных с сервера
       useEffect(() => {
+        if (!vkParams.appId) return; // Ждем получения параметров
         fetch('/api/products')
           .then(res => {
             if (!res.ok) throw new Error('Сетевой запрос не выполнен');
@@ -43,7 +71,7 @@
             setError(err.message);
             setLoading(false);
           });
-      }, []);
+      }, [vkParams]);
 
       // Функция для определения повседневной одежды
       const isCasualClothing = (title, description) => {
