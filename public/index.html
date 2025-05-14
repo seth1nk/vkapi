@@ -8,11 +8,20 @@
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.22.9/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- VK SDK -->
+  <script src="https://vk.com/js/api/openapi.js?169"></script>
 </head>
 <body>
   <div id="root"></div>
   <script type="text/babel">
     const { useState, useEffect } = React;
+
+    // Инициализация VK SDK
+    window.vkAsyncInit = function() {
+      VK.init({
+        apiId: 53563138 // Ваш app_id, замените на реальный, если отличается
+      });
+    };
 
     const App = () => {
       const [products, setProducts] = useState([]);
@@ -22,7 +31,10 @@
       // Получение данных с сервера
       useEffect(() => {
         fetch('/api/products')
-          .then(res => res.json())
+          .then(res => {
+            if (!res.ok) throw new Error('Сетевой запрос не выполнен');
+            return res.json();
+          })
           .then(data => {
             setProducts(data);
             setLoading(false);
