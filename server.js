@@ -11,7 +11,7 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // Middleware для CORS и iframe
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*"); // В продакшене замените на https://vk.com
+  res.header("Access-Control-Allow-Origin", "https://vk.com"); // В продакшене замените на https://vk.com
   res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type");
   res.header("X-Frame-Options", "ALLOW-FROM https://vk.com");
